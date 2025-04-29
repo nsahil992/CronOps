@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jenkins Cron Job Converter</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Jenkins Cron Job Converter</h1>
+        </header>
+        
+        <main>
+            <div class="converter-container">
+                <div class="input-section">
+                    <h2>Enter Cron Expression</h2>
+                    <div class="cron-input">
+                        <div class="cron-fields">
+                            <div class="cron-field">
+                                <label for="minutes">Minutes</label>
+                                <input type="text" id="minutes" placeholder="*" value="*">
+                            </div>
+                            <div class="cron-field">
+                                <label for="hours">Hours</label>
+                                <input type="text" id="hours" placeholder="*" value="*">
+                            </div>
+                            <div class="cron-field">
+                                <label for="dayOfMonth">Day of Month</label>
+                                <input type="text" id="dayOfMonth" placeholder="*" value="*">
+                            </div>
+                            <div class="cron-field">
+                                <label for="month">Month</label>
+                                <input type="text" id="month" placeholder="*" value="*">
+                            </div>
+                            <div class="cron-field">
+                                <label for="dayOfWeek">Day of Week</label>
+                                <input type="text" id="dayOfWeek" placeholder="*" value="*">
+                            </div>
+                        </div>
+                        <div class="full-cron">
+                            <label for="fullCron">Full Cron Expression</label>
+                            <input type="text" id="fullCron" placeholder="* * * * *" value="* * * * *">
+                        </div>
+                    </div>
+
+                    <div class="preset-container">
+                        <h3>Common Presets</h3>
+                        <div class="presets">
+                            <button data-preset="0 0 * * *">Daily (Midnight)</button>
+                            <button data-preset="0 */6 * * *">Every 6 hours</button>
+                            <button data-preset="0 */12 * * *">Twice daily</button>
+                            <button data-preset="0 0 * * 0">Weekly (Sunday)</button>
+                            <button data-preset="0 0 1 * *">Monthly</button>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button id="convertBtn" class="primary-btn">Convert</button>
+                        <button id="saveBtn" class="secondary-btn">Save Expression</button>
+                    </div>
+                </div>
+
+                <div class="output-section">
+                    <h2>Human Readable Translation</h2>
+                    <div id="humanReadable" class="output-display">
+                        <p>Your cron expression will run at every minute of every hour of every day.</p>
+                    </div>
+                    
+                    <h2>Next Execution Times</h2>
+                    <div id="nextExecutions" class="output-display">
+                        <ul id="executionsList">
+                            <!-- Next execution times will be displayed here -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="saved-expressions">
+                <h2>Saved Expressions</h2>
+                <div class="table-container">
+                    <table id="savedExpressionsTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Expression</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="savedExpressionsList">
+                            <!-- Saved expressions will be displayed here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <div id="saveModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Save Cron Expression</h2>
+                <div class="form-group">
+                    <label for="expressionName">Name</label>
+                    <input type="text" id="expressionName" placeholder="Daily Backup">
+                </div>
+                <div class="form-group">
+                    <label for="expressionDescription">Description</label>
+                    <textarea id="expressionDescription" placeholder="Runs daily backup at midnight"></textarea>
+                </div>
+                <button id="confirmSave" class="primary-btn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
