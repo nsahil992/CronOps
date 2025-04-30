@@ -1,3 +1,8 @@
 .DS_Store
 .env
 .idea
+secrets.yaml
+postgres-secret.yaml
+*.secret.yaml
+.vscode/
+Thumbs.db
