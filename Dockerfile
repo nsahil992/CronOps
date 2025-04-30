@@ -18,7 +18,6 @@ WORKDIR /app
 
 COPY --from=builder /app/cronops .
 COPY --from=builder /app/static ./static
-COPY --from=builder /app/.env .env
 
 EXPOSE 8080
 
