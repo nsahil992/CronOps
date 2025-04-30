@@ -3,7 +3,13 @@ name: CI/CD pipeline
 on:
     workflow_dispatch:
     push:
-        branches: [master, feature]
+      branches:
+        - master
+        - feature
+    pull_request:
+      branches:
+        - master
+        - feature
 
 jobs:
     unit-testing:
@@ -52,5 +58,5 @@ jobs:
                 push: true
                 tags: nsahil992/cronops:${{ github.sha }}
 
-                
+
     
