@@ -71,48 +71,53 @@ func main() {
 
 	log.Printf("Server starting on port %s", port)
 	log.Fatal(http.ListenAndServe(":"+port, r))
+	log.Println("POSTGRES_USER:", os.Getenv("POSTGRES_USER"))
+	log.Println("POSTGRES_PASSWORD:", os.Getenv("POSTGRES_PASSWORD"))
+	log.Println("DB_USER:", os.Getenv("DB_USER"))
+	log.Println("DB_PASSWORD:", os.Getenv("DB_PASSWORD"))
+	log.Println("DB_NAME:", os.Getenv("DB_NAME"))
 }
 
 func initDB() {
-    var err error
-    
-    // Get database connection details from environment variables
-    host := os.Getenv("DB_HOST")
-    port := os.Getenv("DB_PORT")
-    user := os.Getenv("DB_USER")
-    password := os.Getenv("DB_PASSWORD")
-    dbname := os.Getenv("DB_NAME")
-    
-    // Set defaults if not provided
-    if host == "" {
-        host = "localhost"
-    }
-    if port == "" {
-        port = "5432"
-    }
-    if user == "" {
-        user = "postgres"
-    }
-    if dbname == "" {
-        dbname = "cronconverter"
-    }
-    
-    // Construct the connection string
-    dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", 
-        user, password, host, port, dbname)
-    
-    db, err = sql.Open("postgres", dbURL)
-    if err != nil {
-        log.Fatal(err)
-    }
+	var err error
 
-    err = db.Ping()
-    if err != nil {
-        log.Fatal(err)
-    }
+	// Get database connection details from environment variables
+	host := os.Getenv("DB_HOST")
+	port := os.Getenv("DB_PORT")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
 
-    // Create table if not exists
-    _, err = db.Exec(`
+	// Set defaults if not provided
+	if host == "" {
+		host = "localhost"
+	}
+	if port == "" {
+		port = "5432"
+	}
+	if user == "" {
+		user = "postgres"
+	}
+	if dbname == "" {
+		dbname = "cronconverter"
+	}
+
+	// Construct the connection string
+	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		user, password, host, port, dbname)
+
+	db, err = sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = db.Ping()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create table if not exists
+	_, err = db.Exec(`
         CREATE TABLE IF NOT EXISTS cron_expressions (
             id SERIAL PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -122,13 +127,12 @@ func initDB() {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     `)
-    if err != nil {
-        log.Fatal(err)
-    }
+	if err != nil {
+		log.Fatal(err)
+	}
 
-    log.Println("Database connected successfully")
+	log.Println("Database connected successfully")
 }
-
 
 func convertCronHandler(w http.ResponseWriter, r *http.Request) {
 	var req ConvertRequest
