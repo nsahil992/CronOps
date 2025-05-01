@@ -48,5 +48,3 @@ jobs:
           push: true
           tags: nsahil992/cronops:${{ github.sha }}
 
-
-          
