@@ -13,6 +13,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/robfig/cron/v3"
 )
 
@@ -39,6 +42,47 @@ type ConvertResponse struct {
 
 var db *sql.DB
 
+// Prometheus metrics
+var (
+	httpRequestsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_requests_total",
+			Help: "Total number of HTTP requests by endpoint and status",
+		},
+		[]string{"endpoint", "status"},
+	)
+
+	httpRequestDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "Duration of HTTP requests in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"endpoint"},
+	)
+
+	cronExpressionsTotal = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "cron_expressions_total",
+			Help: "Total number of cron expressions stored",
+		},
+	)
+
+	dbConnectionErrors = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "db_connection_errors_total",
+			Help: "Total number of database connection errors",
+		},
+	)
+
+	invalidCronExpressions = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "invalid_cron_expressions_total",
+			Help: "Total number of invalid cron expressions submitted",
+		},
+	)
+)
+
 func main() {
 	// Load environment variables
 	err := godotenv.Load()
@@ -52,13 +96,16 @@ func main() {
 	// Create router
 	r := mux.NewRouter()
 
-	// Define routes
-	r.HandleFunc("/api/convert", convertCronHandler).Methods("POST")
-	r.HandleFunc("/api/expressions", getExpressionsHandler).Methods("GET")
-	r.HandleFunc("/api/expressions", createExpressionHandler).Methods("POST")
-	r.HandleFunc("/api/expressions/{id}", getExpressionHandler).Methods("GET")
-	r.HandleFunc("/api/expressions/{id}", updateExpressionHandler).Methods("PUT")
-	r.HandleFunc("/api/expressions/{id}", deleteExpressionHandler).Methods("DELETE")
+	// Define routes with metrics middleware
+	r.HandleFunc("/api/convert", metricMiddleware("/api/convert", convertCronHandler)).Methods("POST")
+	r.HandleFunc("/api/expressions", metricMiddleware("/api/expressions", getExpressionsHandler)).Methods("GET")
+	r.HandleFunc("/api/expressions", metricMiddleware("/api/expressions", createExpressionHandler)).Methods("POST")
+	r.HandleFunc("/api/expressions/{id}", metricMiddleware("/api/expressions/{id}", getExpressionHandler)).Methods("GET")
+	r.HandleFunc("/api/expressions/{id}", metricMiddleware("/api/expressions/{id}", updateExpressionHandler)).Methods("PUT")
+	r.HandleFunc("/api/expressions/{id}", metricMiddleware("/api/expressions/{id}", deleteExpressionHandler)).Methods("DELETE")
+
+	// Add Prometheus metrics endpoint
+	r.Handle("/metrics", promhttp.Handler())
 
 	// Serve static files
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./static")))
@@ -70,12 +117,41 @@ func main() {
 	}
 
 	log.Printf("Server starting on port %s", port)
+	log.Printf("Prometheus metrics available at /metrics")
 	log.Fatal(http.ListenAndServe(":"+port, r))
-	log.Println("POSTGRES_USER:", os.Getenv("POSTGRES_USER"))
-	log.Println("POSTGRES_PASSWORD:", os.Getenv("POSTGRES_PASSWORD"))
-	log.Println("DB_USER:", os.Getenv("DB_USER"))
-	log.Println("DB_PASSWORD:", os.Getenv("DB_PASSWORD"))
-	log.Println("DB_NAME:", os.Getenv("DB_NAME"))
+}
+
+// Middleware to record metrics for each request
+func metricMiddleware(endpoint string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+
+		// Create a custom response writer to capture the status code
+		crw := newCustomResponseWriter(w)
+
+		// Call the next handler
+		next(crw, r)
+
+		// Record metrics after request is processed
+		duration := time.Since(start).Seconds()
+		httpRequestDuration.WithLabelValues(endpoint).Observe(duration)
+		httpRequestsTotal.WithLabelValues(endpoint, fmt.Sprintf("%d", crw.statusCode)).Inc()
+	}
+}
+
+// Custom response writer to capture status code
+type customResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func newCustomResponseWriter(w http.ResponseWriter) *customResponseWriter {
+	return &customResponseWriter{w, http.StatusOK}
+}
+
+func (crw *customResponseWriter) WriteHeader(code int) {
+	crw.statusCode = code
+	crw.ResponseWriter.WriteHeader(code)
 }
 
 func initDB() {
@@ -108,11 +184,13 @@ func initDB() {
 
 	db, err = sql.Open("postgres", dbURL)
 	if err != nil {
+		dbConnectionErrors.Inc()
 		log.Fatal(err)
 	}
 
 	err = db.Ping()
 	if err != nil {
+		dbConnectionErrors.Inc()
 		log.Fatal(err)
 	}
 
@@ -131,6 +209,13 @@ func initDB() {
 		log.Fatal(err)
 	}
 
+	// Count existing expressions for initial metric
+	var count int
+	err = db.QueryRow("SELECT COUNT(*) FROM cron_expressions").Scan(&count)
+	if err == nil && count > 0 {
+		cronExpressionsTotal.Add(float64(count))
+	}
+
 	log.Println("Database connected successfully")
 }
 
@@ -146,6 +231,7 @@ func convertCronHandler(w http.ResponseWriter, r *http.Request) {
 	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 	_, err = parser.Parse(req.Expression)
 	if err != nil {
+		invalidCronExpressions.Inc()
 		http.Error(w, "Invalid cron expression: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -204,6 +290,7 @@ func createExpressionHandler(w http.ResponseWriter, r *http.Request) {
 	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 	_, err = parser.Parse(exp.Expression)
 	if err != nil {
+		invalidCronExpressions.Inc()
 		http.Error(w, "Invalid cron expression: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -219,6 +306,9 @@ func createExpressionHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Increment the counter for expressions
+	cronExpressionsTotal.Inc()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -264,6 +354,7 @@ func updateExpressionHandler(w http.ResponseWriter, r *http.Request) {
 	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 	_, err = parser.Parse(exp.Expression)
 	if err != nil {
+		invalidCronExpressions.Inc()
 		http.Error(w, "Invalid cron expression: "+err.Error(), http.StatusBadRequest)
 		return
 	}
