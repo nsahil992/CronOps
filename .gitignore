@@ -2,3 +2,6 @@
 .DS_Store
 .idea
 cronops-data
+secrets.yaml
+postgres-secret.yaml
+*.secret.yaml
