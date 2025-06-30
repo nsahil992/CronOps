@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: postgres-deployment
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: postgres
@@ -18,6 +18,9 @@ spec:
           envFrom:
             - secretRef:
                 name: postgres-secret
+          env:
+          - name: POSTGRES_HOST_AUTH_METHOD
+            value: trust
           ports:
             - containerPort: 5432
           volumeMounts:
@@ -27,5 +30,5 @@ spec:
       volumes:
         - name: cronops-data
           persistentVolumeClaim:
-            claimName: postgres-pvc
+            claimName: cronops-postgres-pvc
 
