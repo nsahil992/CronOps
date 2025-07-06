@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -84,8 +85,17 @@ var (
 )
 
 func main() {
+
+	logFile, err := os.OpenFile("cronops.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		fmt.Println("Failed to open log file:", err)
+		os.Exit(1)
+	}
+
+	// Set log output to both stdout and file
+	log.SetOutput(io.MultiWriter(os.Stdout, logFile))
 	// Load environment variables
-	err := godotenv.Load()
+	err = godotenv.Load()
 	if err != nil {
 		log.Println("Warning: Error loading .env file")
 	}
