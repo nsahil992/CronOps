@@ -122,6 +122,32 @@ CronOps/
 ```
 
 ---
+## .env.example
+```
+DB_HOST=localhost/host.docker.internal/database
+DB_PORT=5432 (your db port)
+DB_USER=(your db user)
+DB_PASSWORD=(your postgres password)
+DB_NAME=(your database name)
+```
+
+## postgres-secret.example.yaml
+
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+type: Opaque
+data:
+  POSTGRES_USER: anscGdssSE 
+  POSTGRES_PASSWORD: c2hsgadafkgsdg== 
+  POSTGRES_DB: Y3JvbfasbngnRlcg== 
+
+  # echo -n "your value" | base64
+```
+
+---
 
 ## 💻 Local Setup (Docker)
 
@@ -146,7 +172,7 @@ docker compose up --build
 kubectl apply -f postgres-pvc.yaml -f postgres-secret.yaml -f postgres-service.yaml -f postgres-deployment.yaml -f postgres-pv.yaml -n cronops
 
 # Apply CronOps manifests
-kubectl apply -f googly-deployment.yaml -f googly-service.yaml -n cronops
+kubectl apply -f cronops-deployment.yaml -f cronops-service.yaml -n cronops
 
 ```
 
