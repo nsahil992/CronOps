@@ -207,7 +207,8 @@ Loki – central log collection via promtail
 
 ## 📽️ Demo
 
-[![Watch the Demo](https://img.youtube.com/vi/abcd1234xyz/0.jpg)](https://youtu.be/abcd1234xyz)
+[![Watch the Demo](https://img.youtube.com/vi/ASC0EAEFFYc/0.jpg)](https://youtu.be/ASC0EAEFFYc)
+
 
 > 🔗 Click the image above to watch a 5-minute walkthrough of CronOps in action.
 
